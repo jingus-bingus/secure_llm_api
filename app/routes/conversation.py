@@ -5,7 +5,7 @@ import json
 conversation = Blueprint('conversation', __name__)
 
 #add the route '/conversation' to the blueprint
-@conversation.route('/conversation', methods = ['GET', 'POST', 'PUT', 'DELETE'])
+@conversation.route('/conversation', methods = ['GET', 'POST', 'PUT'])
 def manage_conversation():
     try:
         #returns conversation history
@@ -48,14 +48,6 @@ def manage_conversation():
             session['messages'] = chat.messages
 
             return json.dumps(response), 201
-
-
-            
-
-
-
-
-
     
     except Exception as e:
         print(str(e))
