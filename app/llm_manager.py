@@ -1,8 +1,12 @@
 from transformers import pipeline, LlamaForCausalLM, AutoTokenizer
 import torch
 
-class LLM_manager:
-    def __init__(self, model: LlamaForCausalLM.from_pretrained, tokenizer: AutoTokenizer.from_pretrained, messages: list = None, context: str = None, system_prompt: str = None):
+class LLM_Manager:
+    def __init__(self, model: LlamaForCausalLM.from_pretrained, 
+                 tokenizer: AutoTokenizer.from_pretrained, 
+                 messages: list = None, 
+                 context: str = None, 
+                 system_prompt: str = None):
         # initialize transformers pipeline for inference
         self.pipeline = pipeline(
             "text-generation",
