@@ -34,8 +34,9 @@ class Database_Manager:
                 '''
                 CREATE TABLE IF NOT EXISTS users(
                 user_id SERIAL PRIMARY KEY,
-                user_name TEXT
-                );
+                user_name TEXT,
+                password TEXT
+                )
                 '''
             )
             
@@ -156,6 +157,32 @@ class Database_Manager:
                         return None
         except psycopg2.Error as e:
             print("Error retrieving conversation: ", e)
+        finally:
+            cursor.close()
+            connection.close()
+
+    def get_user_by_username(self, user_name):
+        connection = self.connect_to_database()
+        cursor = connection.cursor()  
+        try:
+            query = '''
+            SELECT user_id, user_name, password
+            FROM users
+            WHERE user_name = %s
+            '''
+            cursor.execute(query, (user_name,))
+            user = cursor.fetchone()
+            if user:
+                return {
+                    "user_id": user[0],
+                    "user_name": user[1],
+                    "password": user[2]
+                }
+            else:
+                return None
+        except psycopg2.Error as e:
+            print("Error fetching user by username:", e)
+            raise
         finally:
             cursor.close()
             connection.close()
