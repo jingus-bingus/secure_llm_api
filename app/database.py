@@ -60,18 +60,18 @@ class Database_Manager:
             connection.close()
 
     #inserts a new user to the users table
-    def insert_user(self, user_name):
+    def insert_user(self, user_name, password):
         try:
             connection = self.connect_to_database()
             if connection:
                 with connection:
                     with connection.cursor() as cursor:
                         query = '''
-                        INSERT INTO users (user_name)
-                        VALUES (%s)
+                        INSERT INTO users (user_name, password)
+                        VALUES (%s, %s)
                         RETURNING user_id
                         '''
-                        cursor.execute(query, (user_name,))
+                        cursor.execute(query, (user_name, password))
                         user_id = cursor.fetchone()[0]
                         connection.commit()
                         print("user inserted")
@@ -162,24 +162,25 @@ class Database_Manager:
             connection.close()
 
     def get_user_by_username(self, user_name):
-        connection = self.connect_to_database()
-        cursor = connection.cursor()  
         try:
-            query = '''
-            SELECT user_id, user_name, password
-            FROM users
-            WHERE user_name = %s
-            '''
-            cursor.execute(query, (user_name,))
-            user = cursor.fetchone()
-            if user:
-                return {
-                    "user_id": user[0],
-                    "user_name": user[1],
-                    "password": user[2]
-                }
-            else:
-                return None
+            connection = self.connect_to_database()
+            if connection:
+                cursor = self.connection.cursor()  
+                query = '''
+                SELECT user_id, user_name, password
+                FROM users
+                WHERE user_name = %s
+                '''
+                cursor.execute(query, (user_name,))
+                user = cursor.fetchone()
+                if user:
+                    return {
+                        "user_id": user[0],
+                        "user_name": user[1],
+                        "password": user[2]
+                    }
+                else:
+                    return None
         except psycopg2.Error as e:
             print("Error fetching user by username:", e)
             raise
