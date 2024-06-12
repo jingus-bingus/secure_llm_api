@@ -28,13 +28,14 @@ class Database_Manager:
         cursor = connection.cursor()
 
         try:
+            cursor.execute('CREATE EXTENSION IF NOT EXISTS pgcrypto ;')
             # users tables creation
             cursor.execute(
                 '''
                 CREATE TABLE IF NOT EXISTS users(
                 user_id SERIAL PRIMARY KEY,
                 user_name TEXT
-                )
+                );
                 '''
             )
             
@@ -44,8 +45,8 @@ class Database_Manager:
                 CREATE TABLE IF NOT EXISTS conversations(
                 conversation_id SERIAL PRIMARY KEY,
                 user_id SERIAL REFERENCES users(user_id),
-                messages JSONB
-                )
+                messages BYTEA
+                );
                 '''
             )
 
@@ -93,7 +94,9 @@ class Database_Manager:
                         messages_json = json.dumps(messages)
                         query = '''
                         INSERT INTO conversations (user_id, messages)
-                        VALUES (%s, %s)
+                        VALUES (%s, 
+                        pgp_sym_encrypt(%s::text, 'dummy_secret_key', 'cipher-algo=aes256')
+                        )
                         RETURNING conversation_id
                         '''
                         cursor.execute(query, (self.user_id, messages_json))
@@ -119,7 +122,7 @@ class Database_Manager:
                     messages_json = json.dumps(messages)
                     query = """
                     UPDATE conversations
-                    SET messages = %s
+                    SET messages = pgp_sym_encrypt(%s::text, 'dummy_secret_key', 'cipher-algo=aes256')
                     WHERE conversation_id = %s
                     """
                     cursor.execute(query, (messages_json, conversation_id))
@@ -139,7 +142,10 @@ class Database_Manager:
             if connection:
                 with connection.cursor() as cursor:
                     cursor.execute(
-                        "SELECT user_id, messages FROM conversations WHERE conversation_id = %s",
+                        '''
+                        SELECT user_id, pgp_sym_decrypt(messages::BYTEA, 'dummy_secret_key', 'cipher-algo=aes256')::jsonb 
+                        FROM conversations WHERE conversation_id = %s
+                        ''',
                         [conversation_id]
                     )
                     conversation = cursor.fetchone()
@@ -163,7 +169,10 @@ class Database_Manager:
             if connection:
                 with connection.cursor() as cursor:
                     cursor.execute(
-                        "SELECT conversation_id, messages FROM conversations WHERE user_id = %s",
+                        '''
+                        SELECT conversation_id, pgp_sym_decrypt(messages, 'dummy_secret_key')::jsonb 
+                        FROM conversations WHERE user_id = %s
+                        ''',
                         [self.user_id]
                     )
                     conversations = []
