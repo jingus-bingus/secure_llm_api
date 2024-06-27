@@ -56,8 +56,10 @@ class Database_Manager:
         except psycopg2.Error as e:
             print("Error creating table:", e)
         finally:
-            cursor.close()
-            connection.close()
+            if 'cursor' in locals() and cursor is not None:
+                cursor.close()
+            if 'connection' in locals() and connection is not None:
+                connection.close()
 
     #inserts a new user to the users table
     def insert_user(self, user_name, password):
@@ -80,11 +82,13 @@ class Database_Manager:
         except psycopg2.Error as e:
             print("Error inserting user:", e)
         finally:
-            cursor.close()
-            connection.close()
+            if 'cursor' in locals() and cursor is not None:
+                cursor.close()
+            if 'connection' in locals() and connection is not None:
+                connection.close()
 
     # inserts a conversation given
-    def insert_conversation(self, messages, user_id = None):
+    def insert_conversation(self, messages, key, user_id = None):
         if user_id:
             self.user_id = user_id
         try:
@@ -96,11 +100,11 @@ class Database_Manager:
                         query = '''
                         INSERT INTO conversations (user_id, messages)
                         VALUES (%s, 
-                        pgp_sym_encrypt(%s::text, 'dummy_secret_key', 'cipher-algo=aes256')
+                        pgp_sym_encrypt(%s::text, %s, 'cipher-algo=aes256')
                         )
                         RETURNING conversation_id
                         '''
-                        cursor.execute(query, (self.user_id, messages_json))
+                        cursor.execute(query, (self.user_id, messages_json, key))
                         conversation_id = cursor.fetchone()[0]
                         connection.commit()
                         print("conversation inserted")
@@ -109,11 +113,13 @@ class Database_Manager:
         except psycopg2.Error as e:
             print("Error inserting conversation:", e)
         finally:
-            cursor.close()
-            connection.close()
+            if 'cursor' in locals() and cursor is not None:
+                cursor.close()
+            if 'connection' in locals() and connection is not None:
+                connection.close()
 
     #updates an existing conversation with new messages list
-    def update_conversation(self, messages, conversation_id, user_id = None):
+    def update_conversation(self, messages, conversation_id, key, user_id = None):
         if user_id:
             self.user_id = user_id
         try:
@@ -123,31 +129,33 @@ class Database_Manager:
                     messages_json = json.dumps(messages)
                     query = """
                     UPDATE conversations
-                    SET messages = pgp_sym_encrypt(%s::text, 'dummy_secret_key', 'cipher-algo=aes256')
+                    SET messages = pgp_sym_encrypt(%s::text, %s, 'cipher-algo=aes256')
                     WHERE conversation_id = %s
                     """
-                    cursor.execute(query, (messages_json, conversation_id))
+                    cursor.execute(query, (messages_json, key, conversation_id))
                     connection.commit()
 
         except psycopg2.Error as e:
             print("Error updating conversation:", e)
         finally:
-            cursor.close()
-            connection.close()
+            if 'cursor' in locals() and cursor is not None:
+                cursor.close()
+            if 'connection' in locals() and connection is not None:
+                connection.close()
 
 
     # retrieves messages for a conversation by the conversation id
-    def retrieve_messages(self, conversation_id):
+    def retrieve_messages(self, conversation_id, key):
         try:
             connection = self.connect_to_database()
             if connection:
                 with connection.cursor() as cursor:
                     cursor.execute(
                         '''
-                        SELECT user_id, pgp_sym_decrypt(messages::BYTEA, 'dummy_secret_key', 'cipher-algo=aes256')::jsonb 
+                        SELECT user_id, pgp_sym_decrypt(messages::BYTEA, %s, 'cipher-algo=aes256')::jsonb 
                         FROM conversations WHERE conversation_id = %s
                         ''',
-                        [conversation_id]
+                        [key, conversation_id]
                     )
                     conversation = cursor.fetchone()
                     if conversation:
@@ -158,8 +166,10 @@ class Database_Manager:
         except psycopg2.Error as e:
             print("Error retrieving conversation: ", e)
         finally:
-            cursor.close()
-            connection.close()
+            if 'cursor' in locals() and cursor is not None:
+                cursor.close()
+            if 'connection' in locals() and connection is not None:
+                connection.close()
 
     def get_user_by_username(self, user_name):
         try:
@@ -185,11 +195,13 @@ class Database_Manager:
             print("Error fetching user by username:", e)
             raise
         finally:
-            cursor.close()
-            connection.close()
+            if 'cursor' in locals() and cursor is not None:
+                cursor.close()
+            if 'connection' in locals() and connection is not None:
+                connection.close()
 
     #retrieves all conversation ids with the first message of the conversations by user id
-    def retrieve_conversations(self, user_id = None):
+    def retrieve_conversations(self, key, user_id = None):
         if user_id:
             self.user_id = user_id
         try:
@@ -198,10 +210,10 @@ class Database_Manager:
                 with connection.cursor() as cursor:
                     cursor.execute(
                         '''
-                        SELECT conversation_id, pgp_sym_decrypt(messages, 'dummy_secret_key')::jsonb 
+                        SELECT conversation_id, pgp_sym_decrypt(messages, %s)::jsonb 
                         FROM conversations WHERE user_id = %s
                         ''',
-                        [self.user_id]
+                        [key, self.user_id]
                     )
                     conversations = []
                     rows = cursor.fetchall()
@@ -218,5 +230,33 @@ class Database_Manager:
         except psycopg2.Error as e:
             print("Error retrieving conversation: ", e)
         finally:
-            cursor.close()
-            connection.close()
+            if 'cursor' in locals() and cursor is not None:
+                cursor.close()
+            if 'connection' in locals() and connection is not None:
+                connection.close()
+
+    def rotate_key(self, old_key, new_key):
+        try:
+            connection = self.connect_to_database()
+            if connection:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        '''
+                        SELECT conversation_id, pgp_sym_decrypt(messages, %s)::jsonb
+                        FROM conversations
+                        ''',
+                        [old_key]
+                    )
+                    rows = cursor.fetchall()
+
+                    for row in rows:
+                        conversation_id, messages = row
+                        self.update_conversation(messages, conversation_id, new_key)
+                        
+        except psycopg2.Error as e:
+            print("Error rotating key: ", e)
+        finally:
+            if 'cursor' in locals() and cursor is not None:
+                cursor.close()
+            if 'connection' in locals() and connection is not None:
+                connection.close()

@@ -1,4 +1,8 @@
 from transformers import pipeline, LlamaForCausalLM, AutoTokenizer
+from langchain_community.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.embeddings.sentence_transformer import SentenceTransformerEmbeddings
+from langchain_community.vectorstores import Chroma
 import torch
 
 class LLM_Manager:
@@ -31,7 +35,7 @@ class LLM_Manager:
                 "role": "system", 
                 "content": system_prompt
             })
-        else:
+        elif context:
             content = system_prompt + """
             Answer the questions based on the context below:
             """ + context
@@ -40,10 +44,32 @@ class LLM_Manager:
                 "content": content
             })
 
+    def retrieve_context(self, loader: PyPDFLoader, question: str):
+        documents = loader.load()
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+        texts = text_splitter.split_documents(documents)
+        embedding_function = SentenceTransformerEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+        vectorstore = Chroma(collection_name="sample_collection", embedding_function = embedding_function)
+        vectorstore.add_documents(texts)
+        retriever = vectorstore.as_retriever(k=7)
+
+        docs = retriever.invoke(question)
+
+        return "\n\n".join([d.page_content for d in docs])
+
     # appends a message of role user to messages
-    def add_message_user(self, message_user: str):
-        self.messages.append({"role": "user",
-                              "content": message_user})
+    def add_message_user(self, message_user: str, loader: PyPDFLoader = None):
+        if not loader:
+            self.messages.append({"role": "user",
+                                "content": message_user})
+        else:
+            content = """
+            Answer the questions based on the context below:
+            """ + self.retrieve_context(loader, question=message_user) + """
+            Question: 
+            """ + message_user
+            self.messages.append({"role": "user",
+                                "content": content})
     
     # appends a message of role assistant to messages
     def add_message_llm(self, message_llm: str):
@@ -51,8 +77,8 @@ class LLM_Manager:
                               "content": message_llm})
     
     #generates a new assistant message based on the messages list
-    def generate_response(self, user_prompt: str):
-        self.add_message_user(user_prompt)
+    def generate_response(self, user_prompt: str, loader: PyPDFLoader = None):
+        self.add_message_user(user_prompt, loader)
 
         # tokenizes messages list as prompt
         prompt = self.pipeline.tokenizer.apply_chat_template(
