@@ -39,20 +39,25 @@ class LLM_Manager:
             content = system_prompt + """
             Answer the questions based on the context below:
             """ + context
+
             self.messages.append({
                 "role": "system", 
                 "content": content
             })
 
+    # retrieves context relevant to question from documents passed in loader
     def retrieve_context(self, loader: PyPDFLoader, question: str):
         documents = loader.load()
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
         texts = text_splitter.split_documents(documents)
+
+        # creates a vector store of the documents passed in loader
         embedding_function = SentenceTransformerEmbeddings(model_name="BAAI/bge-small-en-v1.5")
         vectorstore = Chroma(collection_name="sample_collection", embedding_function = embedding_function)
         vectorstore.add_documents(texts)
-        retriever = vectorstore.as_retriever(k=7)
 
+        # performs a similarity search on the question to pick relative context
+        retriever = vectorstore.as_retriever(k=7)
         docs = retriever.invoke(question)
 
         return "\n\n".join([d.page_content for d in docs])
@@ -68,6 +73,7 @@ class LLM_Manager:
             """ + self.retrieve_context(loader, question=message_user) + """
             Question: 
             """ + message_user
+
             self.messages.append({"role": "user",
                                 "content": content})
     
