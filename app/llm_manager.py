@@ -4,6 +4,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings.sentence_transformer import SentenceTransformerEmbeddings
 from langchain_community.vectorstores import Chroma
 import torch
+import time
 
 class LLM_Manager:
     def __init__(self, model: LlamaForCausalLM.from_pretrained, 
@@ -28,6 +29,8 @@ class LLM_Manager:
         if system_prompt:
             self.add_system_prompt(system_prompt, context)
 
+        self.time_generation = None
+
     #adds system prompt to messages, takes context as optional argument
     def add_system_prompt(self, system_prompt: str, context: str = None):
         if not context:
@@ -45,6 +48,18 @@ class LLM_Manager:
                 "content": content
             })
 
+    def remove_chars_at_indices(self, s, indices):
+        # Convert the string to a list of characters
+        chars = list(s)
+        
+        # Sort indices in reverse order to avoid index shifting issues
+        for index in sorted(indices, reverse=True):
+            if 0 <= index < len(chars):
+                del chars[index]
+        
+        # Convert the list back to a string
+        return ''.join(chars)
+
     # retrieves context relevant to question from documents passed in loader
     def retrieve_context(self, loader: PyPDFLoader, question: str):
         documents = loader.load()
@@ -59,8 +74,22 @@ class LLM_Manager:
         # performs a similarity search on the question to pick relative context
         retriever = vectorstore.as_retriever(k=7)
         docs = retriever.invoke(question)
+        content = "\n\n".join([d.page_content for d in docs])
 
-        return "\n\n".join([d.page_content for d in docs])
+        indeces = []
+        for index, char in enumerate(content):
+            if char == "\uF0A8":
+                for i in range (0,5):
+                    indeces.append(index+i)
+            elif char == "\uF0FE":
+                indeces.append(index)
+
+        
+        content = self.remove_chars_at_indices(content, indeces)
+
+        print(content)
+
+        return content
 
     # appends a message of role user to messages
     def add_message_user(self, message_user: str, loader: PyPDFLoader = None):
@@ -97,6 +126,7 @@ class LLM_Manager:
             self.pipeline.tokenizer.convert_tokens_to_ids("<|eot_id|>")
         ]
 
+        start = time.time()
         # generates a new message from the tokenized prompt
         outputs = self.pipeline(
             prompt,
@@ -106,6 +136,8 @@ class LLM_Manager:
             temperature=0.6,
             top_p=0.9,
         )
+        end = time.time()
+        self.time_generation = (end - start) * 10**3
 
         # update message list with new response and returns
         self.add_message_llm(outputs[0]["generated_text"][len(prompt):])
