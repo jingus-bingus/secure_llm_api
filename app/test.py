@@ -17,15 +17,15 @@
 
 import requests
 
-url = "http://127.0.0.1:5000/conversation"
+url = "https://127.0.0.1:5000/conversation"
 
 session = requests.Session()
-data = {'prompt': 'Why is the sky blue?'}
-response = session.post(url, json=data).json()
+data = {'prompt': 'Why is the sky blue?', 'user_id' : 3}
+response = session.post(url, json=data, verify=False).json()
 print(response['output'])
 
-data = {'prompt': 'Who discovered this?'}
-response = session.put(url, json=data).json()
+data = {'prompt': 'Who discovered this?', 'user_id': 3, 'conversation_id' : response['conversation_id']}
+response = session.put(url, json=data, verify=False).json()
 print(response['output'])
 
 print(response)

@@ -6,9 +6,9 @@ def signup():
     user_name = input("Enter username: ")
     password = input("Enter password: ")
     data = {"user_name": user_name, "password": password}
-    url = "http://127.0.0.1:5000/signup"
+    url = "https://127.0.0.1:5000/signup"
     try:
-        response = requests.post(url, json=data)
+        response = requests.post(url, json=data, verify=False)
         print("Status Code:", response.status_code)
         print("Response Body:", response.text)  # Print the raw response body
 
@@ -26,9 +26,9 @@ def login():
     user_name = input("Enter username: ")
     password = input("Enter password: ")
     data = {"user_name": user_name, "password": password}
-    url = "http://127.0.0.1:5000/login"
+    url = "https://127.0.0.1:5000/login"
     try:
-        response = requests.post(url, json=data)
+        response = requests.post(url, json=data, verify=False)
         print("Status Code:", response.status_code)
         print("Response Body:", response.text)  # Print the raw response body
 
@@ -61,8 +61,8 @@ def main():
     data = {"prompt": message, "user_id": user_id}
 
     session = requests.Session()
-    url = "http://127.0.0.1:5000/conversation"
-    response = session.post(url, json=data).json()
+    url = "https://127.0.0.1:5000/conversation"
+    response = session.post(url, json=data, verify=False).json()
     conversation_id = response["conversation_id"]
     print("BOT: ", response['output'])
     print("------------------------------------")
@@ -74,7 +74,7 @@ def main():
             break
 
         data = {"prompt": message, "conversation_id": conversation_id, "user_id": user_id}
-        response = session.put(url, json=data).json()
+        response = session.put(url, json=data, verify=False).json()
 
         print("BOT: ", response['output'])
         print("------------------------------------")

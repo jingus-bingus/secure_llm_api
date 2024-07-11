@@ -25,8 +25,14 @@ app.config['TOKENIZER'] = AutoTokenizer.from_pretrained("../../Meta-Llama-3-8B-I
 app.register_blueprint(conversation)
 app.register_blueprint(auth_bp)
 
+CERT_FILE = "./ssl_context/cert.pem"
+KEY_FILE = "./ssl_context/key.pem"
+
+app.config['KEY'] = 'dummy_key'
+
 def start_server():
-    app.run(debug=True, use_reloader=False)
+    context = ("./ssl_context/cert.pem", "./ssl_context/key.pem")
+    app.run(debug=True, ssl_context=context, use_reloader=False)
 
 if __name__ == '__main__':
     start_server()

@@ -1,3 +1,4 @@
+import os
 import json
 import psycopg2
 from psycopg2 import sql
@@ -5,15 +6,20 @@ from psycopg2 import sql
 class Database_Manager:
     def __init__(self, user_id = None):
         self.user_id = user_id
+        self.dbname = "secure_api"
+        self.user = "postgres"
+        self.password = "postgres"
+        self.host = "127.0.0.1"
+        self.port = "5432"
 
     def connect_to_database(self):
         try:
             connection = psycopg2.connect(
-                dbname = "secure_api",
-                user = "postgres",
-                password = "postgres",
-                host = "127.0.0.1",
-                port = "5432"
+                dbname = self.dbname,
+                user = self.user,
+                password = self.password,
+                host = self.host,
+                port = self.port
             )
 
             return connection
@@ -175,7 +181,7 @@ class Database_Manager:
         try:
             connection = self.connect_to_database()
             if connection:
-                cursor = self.connection.cursor()  
+                cursor = connection.cursor()  
                 query = '''
                 SELECT user_id, user_name, password
                 FROM users
@@ -260,3 +266,11 @@ class Database_Manager:
                 cursor.close()
             if 'connection' in locals() and connection is not None:
                 connection.close()
+
+    def backup(self):
+        command_str = "pg_dump -U " + self.user + " -h " + self.host + " -p " + self.port + " " + self.dbname + " > backup.sql"
+        os.system(command_str)
+
+    def restore(self):
+        command_str = "pg_restore -U " + self.user + " -h " + self.host + " -p " + self.port + " -d " + self.dbname + " -f backup.sql"
+        os.system(command_str)

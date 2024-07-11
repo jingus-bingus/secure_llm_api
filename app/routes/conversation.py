@@ -14,7 +14,7 @@ def manage_conversation():
             input = request.get_json()
             db = Database_Manager(user_id = input['user_id'])
 
-            return db.retrieve_conversations(), 200
+            return db.retrieve_conversations(key=current_app.config['KEY']), 200
         
         #begins a conversation
         if request.method == 'POST':
@@ -35,7 +35,7 @@ def manage_conversation():
             response['output'] = chat.generate_response(input['prompt'])
             # session['messages'] = chat.messages
             db = Database_Manager(user_id = input['user_id'])
-            conversation_id = db.insert_conversation(messages = chat.messages)
+            conversation_id = db.insert_conversation(messages = chat.messages, key=current_app.config['KEY'])
             
             response['conversation_id'] = conversation_id
             return json.dumps(response), 201
@@ -44,7 +44,7 @@ def manage_conversation():
         if request.method == 'PUT':
             input = request.get_json()
             db = Database_Manager(user_id = input['user_id'])
-            messages = db.retrieve_messages(conversation_id = input['conversation_id'])
+            messages = db.retrieve_messages(conversation_id = input['conversation_id'], key=current_app.config['KEY'])
 
             chat = LLM_Manager(
                 model=current_app.config['MODEL'], 
@@ -54,7 +54,7 @@ def manage_conversation():
             
             response = {}
             response['output'] = chat.generate_response(input['prompt'])
-            db.update_conversation(messages = chat.messages, conversation_id = input['conversation_id'])
+            db.update_conversation(messages = chat.messages, conversation_id = input['conversation_id'], key=current_app.config['KEY'])
 
             return json.dumps(response), 201
     
