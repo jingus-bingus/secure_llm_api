@@ -1,5 +1,8 @@
 import requests
-import json
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning) #disables https verify, this is fine for development but not for production
+
+cert_path = False
 
 def signup():
     print("---------Sign Up---------")
@@ -8,7 +11,7 @@ def signup():
     data = {"user_name": user_name, "password": password}
     url = "https://127.0.0.1:5000/signup"
     try:
-        response = requests.post(url, json=data, verify=False)
+        response = requests.post(url, json=data, verify=cert_path)
         print("Status Code:", response.status_code)
         print("Response Body:", response.text)  # Print the raw response body
 
@@ -28,7 +31,7 @@ def login():
     data = {"user_name": user_name, "password": password}
     url = "https://127.0.0.1:5000/login"
     try:
-        response = requests.post(url, json=data, verify=False)
+        response = requests.post(url, json=data, verify=cert_path)
         print("Status Code:", response.status_code)
         print("Response Body:", response.text)  # Print the raw response body
 
@@ -46,9 +49,9 @@ def main():
     user_id = None
 
     if choice.lower() == 'signup':
-        user_id = signup()
+        user_id = signup()["user_id"]
     elif choice.lower() == 'login':
-        user_id = login()
+        user_id = login()["user_id"]
     
     if user_id is None:
         print("Exiting program...")
@@ -62,7 +65,7 @@ def main():
 
     session = requests.Session()
     url = "https://127.0.0.1:5000/conversation"
-    response = session.post(url, json=data, verify=False).json()
+    response = session.post(url, json=data, verify=cert_path).json()
     conversation_id = response["conversation_id"]
     print("BOT: ", response['output'])
     print("------------------------------------")
@@ -74,7 +77,7 @@ def main():
             break
 
         data = {"prompt": message, "conversation_id": conversation_id, "user_id": user_id}
-        response = session.put(url, json=data, verify=False).json()
+        response = session.put(url, json=data, verify=cert_path).json()
 
         print("BOT: ", response['output'])
         print("------------------------------------")
