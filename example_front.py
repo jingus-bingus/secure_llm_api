@@ -1,4 +1,5 @@
 import requests
+import webbrowser
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning) #disables https verify, this is fine for development but not for production
 
@@ -13,10 +14,16 @@ def signup():
     try:
         response = requests.post(url, json=data, verify=cert_path)
         print("Status Code:", response.status_code)
-        print("Response Body:", response.text)  # Print the raw response body
 
         if response.status_code == 201:
-            return response.json()
+            response_data = response.json()
+            print("User created successfully!")
+            user_id = response_data['user_id']
+            totp_secret = response_data['totp_secret']
+            # Open the QR code URL in the web browser
+            qr_code_url = f"http://127.0.0.1:5000/qrcode/{user_id}/{totp_secret}"
+            webbrowser.open(qr_code_url)
+            return user_id
         else:
             print("Error with request:", response.text)
             return None
@@ -36,7 +43,17 @@ def login():
         print("Response Body:", response.text)  # Print the raw response body
 
         if response.status_code == 200:
-            return response.json()
+            user_id = response.json()['user_id']
+            token = input("Enter the token from Google Authenticator: ")
+            verify_url = "http://127.0.0.1:5000/verify-token"
+            verify_data = {"user_id": user_id, "token": token}
+            verify_response = requests.post(verify_url, json=verify_data)
+            if verify_response.status_code == 200 and verify_response.json()['verified']:
+                print("Login successful!")
+                return user_id
+            else:
+                print("Invalid token.")
+                return None
         else:
             print("Error with request:", response.text)
             return None
