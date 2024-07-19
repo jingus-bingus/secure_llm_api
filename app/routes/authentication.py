@@ -102,7 +102,7 @@ def login():
         user = db_manager.get_user_by_username(user_name)
         if user and bcrypt.checkpw(password.encode('utf-8'), user['password'].encode('utf-8')):
             session['user_id'] = user['user_id']
-            return jsonify({"message": "Password verified, please provide the TOTP token"}), 200
+            return jsonify({"message": "Password verified, please provide the TOTP token", 'user_id': user['user_id']}), 200
         else:
             return jsonify({"error": "Invalid username or password"}), 401
     except Exception as e:

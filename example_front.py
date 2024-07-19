@@ -51,7 +51,9 @@ def login():
         print("Response Body:", response.text)  # Print the raw response body
 
         if response.status_code == 200:
-            user_id = response.json()['user_id']
+            data_json = response.json()
+            user_id = data_json['user_id']
+
             token = input("Enter the token from Google Authenticator: ")
 
             verify_url = "https://127.0.0.1:5000/verify-token"
