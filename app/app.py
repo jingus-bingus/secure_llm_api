@@ -1,4 +1,5 @@
-from flask import Flask, session
+from flask import Flask, flash, request, redirect, url_for
+from werkzeug.utils import secure_filename
 from transformers import LlamaForCausalLM, AutoTokenizer, BitsAndBytesConfig
 import torch
 from flask_cors import CORS
@@ -13,6 +14,9 @@ app.secret_key = Config.SECRET_KEY
 
 # create config for oauth
 app.config.from_object(Config)
+
+app.config['UPLOAD_FOLDER'] = './files'
+app.config['ALLOWED_EXTENSIONS'] = {'pdf',}
 
 # creates config for quanitization
 bits_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.bfloat16)
