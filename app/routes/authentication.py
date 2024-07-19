@@ -65,24 +65,29 @@ def signup():
 
 @auth_bp.route('/qrcode/<user_id>/<totp_secret>', methods=['GET'])
 def qrcode_route(user_id, totp_secret):
-    user = db_manager.get_user_by_id(user_id)
-    if user:
-        totp = pyotp.TOTP(totp_secret)
-        otpauth_url = totp.provisioning_uri(name=user['user_name'], issuer_name="YourApp")
+    try:
+        user = db_manager.get_user_by_id(user_id)
+        if user:
+            totp = pyotp.TOTP(totp_secret)
+            otpauth_url = totp.provisioning_uri(name=user['user_name'], issuer_name="Secure LLM Api")
 
-        qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
-        qr.add_data(otpauth_url)
-        qr.make(fit=True)
-        img = qr.make_image(fill_color="black", back_color="white")
+            qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
+            qr.add_data(otpauth_url)
+            qr.make(fit=True)
+            img = qr.make_image(fill_color="black", back_color="white")
 
-        buffered = io.BytesIO()
-        img.save(buffered, format="PNG")
-        qr_code_base64 = base64.b64encode(buffered.getvalue()).decode()
+            buffered = io.BytesIO()
+            img.save(buffered, format="PNG")
+            qr_code_base64 = base64.b64encode(buffered.getvalue()).decode()
 
-        # Return the HTML page with the embedded QR code
-        return render_template_string(html_template, qr_code=qr_code_base64)
-    else:
-        return jsonify({"error": "User not found"}), 404
+            # Return the HTML page with the embedded QR code
+            return render_template_string(html_template, qr_code=qr_code_base64)
+        else:
+            return jsonify({"error": "User not found"}), 404
+    except Exception as e:
+        print("Error generating QR code:", e)
+        traceback.print_exc()
+        return jsonify({"error": "Unable to generate QR code", "details": str(e)}), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
@@ -97,7 +102,7 @@ def login():
         user = db_manager.get_user_by_username(user_name)
         if user and bcrypt.checkpw(password.encode('utf-8'), user['password'].encode('utf-8')):
             session['user_id'] = user['user_id']
-            return jsonify({"message": "Password verified, please provide the TOTP token", "user_id": user['user_id']}), 200
+            return jsonify({"message": "Password verified, please provide the TOTP token"}), 200
         else:
             return jsonify({"error": "Invalid username or password"}), 401
     except Exception as e:

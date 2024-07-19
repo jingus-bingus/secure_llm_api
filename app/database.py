@@ -34,9 +34,10 @@ class Database_Manager:
             print("Failed to connect to the database.")
             return
 
-        cursor = connection.cursor()
+        
 
         try:
+            cursor = connection.cursor()
             cursor.execute('CREATE EXTENSION IF NOT EXISTS pgcrypto;')
 
             # Create users table
@@ -105,15 +106,6 @@ class Database_Manager:
         except psycopg2.Error as e:
             print("Error inserting user:", e)
             raise e
-        finally:
-<<<<<<< HEAD
-            if 'cursor' in locals() and cursor is not None:
-                cursor.close()
-            if 'connection' in locals() and connection is not None:
-=======
-            if connection:
->>>>>>> database
-                connection.close()
 
     # inserts a conversation given
     def insert_conversation(self, messages, key, user_id = None):
@@ -204,60 +196,29 @@ class Database_Manager:
         if connection is None:
             raise Exception("Failed to connect to the database.")
 
-        cursor = None
         try:
-<<<<<<< HEAD
-            connection = self.connect_to_database()
-            if connection:
-                cursor = connection.cursor()  
-                query = '''
-                SELECT user_id, user_name, password
-                FROM users
-                WHERE user_name = %s
-                '''
-                cursor.execute(query, (user_name,))
-                user = cursor.fetchone()
-                if user:
-                    return {
-                        "user_id": user[0],
-                        "user_name": user[1],
-                        "password": user[2]
-                    }
-                else:
-                    return None
-=======
-            cursor = connection.cursor()
-            query = '''
-            SELECT user_id, user_name, password, totp_secret
-            FROM users
-            WHERE user_name = %s
-            '''
-            cursor.execute(query, (user_name,))
-            user = cursor.fetchone()
-            if user:
-                return {
-                    "user_id": user[0],
-                    "user_name": user[1],
-                    "password": user[2],
-                    "totp_secret": user[3]
-                }
-            else:
-                return None
->>>>>>> database
+            with connection:
+                with connection.cursor() as cursor:
+                    query = '''
+                    SELECT user_id, user_name, password, totp_secret
+                    FROM users
+                    WHERE user_name = %s
+                    '''
+                    cursor.execute(query, (user_name,))
+                    user = cursor.fetchone()
+                    if user:
+                        return {
+                            "user_id": user[0],
+                            "user_name": user[1],
+                            "password": user[2],
+                            "totp_secret": user[3]
+                        }
+                    else:
+                        return None
         except psycopg2.Error as e:
             print("Error fetching user by username:", e)
             raise e
-        finally:
-<<<<<<< HEAD
-            if 'cursor' in locals() and cursor is not None:
-                cursor.close()
-            if 'connection' in locals() and connection is not None:
-=======
-            if cursor:
-                cursor.close()
-            if connection:
-                connection.close()
-
+                
     def get_user_by_id(self, user_id):
         connection = self.connect_to_database()
         if connection is None:
@@ -285,11 +246,7 @@ class Database_Manager:
         except psycopg2.Error as e:
             print("Error fetching user by ID:", e)
             raise e
-        finally:
-            if connection:
->>>>>>> database
-                connection.close()
-
+        
     #retrieves all conversation ids with the first message of the conversations by user id
     def retrieve_conversations(self, key, user_id = None):
         if user_id:
@@ -319,11 +276,46 @@ class Database_Manager:
         except psycopg2.Error as e:
             print("Error retrieving conversation: ", e)
         finally:
-<<<<<<< HEAD
             if 'cursor' in locals() and cursor is not None:
                 cursor.close()
             if 'connection' in locals() and connection is not None:
                 connection.close()
+
+    def set_totp_secret(self, user_id, totp_secret):
+        connection = self.connect_to_database()
+        if connection:
+            try:
+                with connection:
+                    with connection.cursor() as cursor:
+                        query = '''
+                        UPDATE users
+                        SET totp_secret = %s
+                        WHERE user_id = %s
+                        '''
+                        cursor.execute(query, (totp_secret, user_id))
+                        connection.commit()
+            except psycopg2.Error as e:
+                print(f"Error setting TOTP secret: {e}")
+
+    def get_totp_secret(self, user_id):
+        connection = self.connect_to_database()
+        if connection:
+            try:
+                with connection:
+                    with connection.cursor() as cursor:
+                        query = '''
+                        SELECT totp_secret
+                        FROM users
+                        WHERE user_id = %s
+                        '''
+                        cursor.execute(query, (user_id,))
+                        result = cursor.fetchone()
+                        if result:
+                            return result[0]
+                        else:
+                            return None
+            except psycopg2.Error as e:
+                print(f"Error fetching TOTP secret: {e}")
 
     def rotate_key(self, old_key, new_key):
         try:
@@ -358,43 +350,3 @@ class Database_Manager:
     def restore(self):
         command_str = "pg_restore -U " + self.user + " -h " + self.host + " -p " + self.port + " -d " + self.dbname + " -f backup.sql"
         os.system(command_str)
-=======
-            cursor.close()
-            connection.close()
-
-    def set_totp_secret(self, user_id, totp_secret):
-        connection = self.connect_to_database()
-        if connection:
-            with connection:
-                with connection.cursor() as cursor:
-                    try:
-                        query = '''
-                        UPDATE users
-                        SET totp_secret = %s
-                        WHERE user_id = %s
-                        '''
-                        cursor.execute(query, (totp_secret, user_id))
-                        connection.commit()
-                    except psycopg2.Error as e:
-                        print(f"Error setting TOTP secret: {e}")
-
-    def get_totp_secret(self, user_id):
-        connection = self.connect_to_database()
-        if connection:
-            with connection:
-                with connection.cursor() as cursor:
-                    try:
-                        query = '''
-                        SELECT totp_secret
-                        FROM users
-                        WHERE user_id = %s
-                        '''
-                        cursor.execute(query, (user_id,))
-                        result = cursor.fetchone()
-                        if result:
-                            return result[0]
-                        else:
-                            return None
-                    except psycopg2.Error as e:
-                        print(f"Error fetching TOTP secret: {e}")
->>>>>>> database
