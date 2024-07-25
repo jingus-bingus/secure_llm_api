@@ -28,70 +28,84 @@ class Database_Manager:
             print(f"Error connecting to database: {e}")
             return None
         
-    # sets up the database with the necessary tables
     def create_tables(self):
         connection = self.connect_to_database()
-        cursor = connection.cursor()
+        if connection is None:
+            print("Failed to connect to the database.")
+            return
+
+        
 
         try:
-            cursor.execute('CREATE EXTENSION IF NOT EXISTS pgcrypto ;')
-            # users tables creation
+            cursor = connection.cursor()
+            cursor.execute('CREATE EXTENSION IF NOT EXISTS pgcrypto;')
+
+            # Create users table
             cursor.execute(
                 '''
-                CREATE TABLE IF NOT EXISTS users(
-                user_id SERIAL PRIMARY KEY,
-                user_name TEXT,
-                password TEXT
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id SERIAL PRIMARY KEY,
+                    user_name TEXT,
+                    password TEXT
                 )
                 '''
             )
-            
-            # conversations tables creation
+
+            # Add totp_secret column if it doesn't exist
             cursor.execute(
                 '''
-                CREATE TABLE IF NOT EXISTS conversations(
-                conversation_id SERIAL PRIMARY KEY,
-                user_id SERIAL REFERENCES users(user_id),
-                messages BYTEA
-                );
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='totp_secret') THEN
+                        ALTER TABLE users ADD COLUMN totp_secret TEXT;
+                    END IF;
+                END
+                $$;
+                '''
+            )
+
+            # Create conversations table
+            cursor.execute(
+                '''
+                CREATE TABLE IF NOT EXISTS conversations (
+                    conversation_id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(user_id),
+                    messages BYTEA
+                )
                 '''
             )
 
             connection.commit()
-            print('tables created')
+            print('Tables created or updated successfully.')
         except psycopg2.Error as e:
-            print("Error creating table:", e)
+            print("Error creating or updating tables:", e)
         finally:
             if 'cursor' in locals() and cursor is not None:
                 cursor.close()
             if 'connection' in locals() and connection is not None:
                 connection.close()
 
-    #inserts a new user to the users table
-    def insert_user(self, user_name, password):
-        try:
-            connection = self.connect_to_database()
-            if connection:
-                with connection:
-                    with connection.cursor() as cursor:
-                        query = '''
-                        INSERT INTO users (user_name, password)
-                        VALUES (%s, %s)
-                        RETURNING user_id
-                        '''
-                        cursor.execute(query, (user_name, password))
-                        user_id = cursor.fetchone()[0]
-                        connection.commit()
-                        print("user inserted")
-                    return user_id
+    def insert_user(self, user_name, password, totp_secret):
+        connection = self.connect_to_database()
+        if connection is None:
+            raise Exception("Failed to connect to the database.")
 
+        try:
+            with connection:
+                with connection.cursor() as cursor:
+                    query = '''
+                    INSERT INTO users (user_name, password, totp_secret)
+                    VALUES (%s, %s, %s)
+                    RETURNING user_id
+                    '''
+                    cursor.execute(query, (user_name, password, totp_secret))
+                    user_id = cursor.fetchone()[0]
+                    connection.commit()
+                    print("User inserted successfully.")
+                    return user_id
         except psycopg2.Error as e:
             print("Error inserting user:", e)
-        finally:
-            if 'cursor' in locals() and cursor is not None:
-                cursor.close()
-            if 'connection' in locals() and connection is not None:
-                connection.close()
+            raise e
 
     # inserts a conversation given
     def insert_conversation(self, messages, key, user_id = None):
@@ -178,34 +192,61 @@ class Database_Manager:
                 connection.close()
 
     def get_user_by_username(self, user_name):
+        connection = self.connect_to_database()
+        if connection is None:
+            raise Exception("Failed to connect to the database.")
+
         try:
-            connection = self.connect_to_database()
-            if connection:
-                cursor = connection.cursor()  
-                query = '''
-                SELECT user_id, user_name, password
-                FROM users
-                WHERE user_name = %s
-                '''
-                cursor.execute(query, (user_name,))
-                user = cursor.fetchone()
-                if user:
-                    return {
-                        "user_id": user[0],
-                        "user_name": user[1],
-                        "password": user[2]
-                    }
-                else:
-                    return None
+            with connection:
+                with connection.cursor() as cursor:
+                    query = '''
+                    SELECT user_id, user_name, password, totp_secret
+                    FROM users
+                    WHERE user_name = %s
+                    '''
+                    cursor.execute(query, (user_name,))
+                    user = cursor.fetchone()
+                    if user:
+                        return {
+                            "user_id": user[0],
+                            "user_name": user[1],
+                            "password": user[2],
+                            "totp_secret": user[3]
+                        }
+                    else:
+                        return None
         except psycopg2.Error as e:
             print("Error fetching user by username:", e)
-            raise
-        finally:
-            if 'cursor' in locals() and cursor is not None:
-                cursor.close()
-            if 'connection' in locals() and connection is not None:
-                connection.close()
+            raise e
+                
+    def get_user_by_id(self, user_id):
+        connection = self.connect_to_database()
+        if connection is None:
+            raise Exception("Failed to connect to the database.")
 
+        try:
+            with connection:
+                with connection.cursor() as cursor:
+                    query = '''
+                    SELECT user_id, user_name, password, totp_secret
+                    FROM users
+                    WHERE user_id = %s
+                    '''
+                    cursor.execute(query, (user_id,))
+                    user = cursor.fetchone()
+                    if user:
+                        return {
+                            "user_id": user[0],
+                            "user_name": user[1],
+                            "password": user[2],
+                            "totp_secret": user[3]
+                        }
+                    else:
+                        return None
+        except psycopg2.Error as e:
+            print("Error fetching user by ID:", e)
+            raise e
+        
     #retrieves all conversation ids with the first message of the conversations by user id
     def retrieve_conversations(self, key, user_id = None):
         if user_id:
@@ -232,7 +273,6 @@ class Database_Manager:
                         }
                         conversations.append(entry)
                     return conversations
-
         except psycopg2.Error as e:
             print("Error retrieving conversation: ", e)
         finally:
@@ -240,6 +280,42 @@ class Database_Manager:
                 cursor.close()
             if 'connection' in locals() and connection is not None:
                 connection.close()
+
+    def set_totp_secret(self, user_id, totp_secret):
+        connection = self.connect_to_database()
+        if connection:
+            try:
+                with connection:
+                    with connection.cursor() as cursor:
+                        query = '''
+                        UPDATE users
+                        SET totp_secret = %s
+                        WHERE user_id = %s
+                        '''
+                        cursor.execute(query, (totp_secret, user_id))
+                        connection.commit()
+            except psycopg2.Error as e:
+                print(f"Error setting TOTP secret: {e}")
+
+    def get_totp_secret(self, user_id):
+        connection = self.connect_to_database()
+        if connection:
+            try:
+                with connection:
+                    with connection.cursor() as cursor:
+                        query = '''
+                        SELECT totp_secret
+                        FROM users
+                        WHERE user_id = %s
+                        '''
+                        cursor.execute(query, (user_id,))
+                        result = cursor.fetchone()
+                        if result:
+                            return result[0]
+                        else:
+                            return None
+            except psycopg2.Error as e:
+                print(f"Error fetching TOTP secret: {e}")
 
     def rotate_key(self, old_key, new_key):
         try:
