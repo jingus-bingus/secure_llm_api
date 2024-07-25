@@ -1,6 +1,7 @@
 import requests
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning) #disables https verify, this is fine for development but not for production
+import os
 
 cert_path = False
 
@@ -56,12 +57,27 @@ def main():
     if user_id is None:
         print("Exiting program...")
         return
+    
+    choice = 0
+    file_choice = None
+    while choice != 'n':
+        files = os.listdir('./app/files')
+        for i, file in enumerate(files):
+            print(str(i) + ': ' + file)
+        print("Follow link to upload a new file: https://127.0.0.1:5000/upload")
+        choice = input("Do you want to include a file as context? (<file number>, n to skip, or press enter to reload files)")
+        if choice.isdigit():
+            file_choice = files[int(choice)]
+            break
 
     print("---------conversation start---------")
 
     message = input("USER: ")
     print("------------------------------------")
-    data = {"prompt": message, "user_id": user_id}
+    if file_choice:
+        data = {"prompt": message, "user_id": user_id, "file": file_choice}
+    else:
+        data = {"prompt": message, "user_id": user_id}
 
     session = requests.Session()
     url = "https://127.0.0.1:5000/conversation"
@@ -75,8 +91,12 @@ def main():
         print("------------------------------------")
         if message == "QUIT":
             break
+        
+        if file_choice:
+            data = {"prompt": message, "conversation_id": conversation_id, "user_id": user_id, "file": file_choice}
+        else:
+            data = {"prompt": message, "conversation_id": conversation_id, "user_id": user_id}
 
-        data = {"prompt": message, "conversation_id": conversation_id, "user_id": user_id}
         response = session.put(url, json=data, verify=cert_path).json()
 
         print("BOT: ", response['output'])

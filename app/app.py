@@ -4,7 +4,7 @@ from transformers import LlamaForCausalLM, AutoTokenizer, BitsAndBytesConfig
 import torch
 from flask_cors import CORS
 import os
-from routes import conversation
+from routes import conversation, upload
 from routes.authentication import auth_bp
 from config import Config
 
@@ -28,6 +28,7 @@ app.config['TOKENIZER'] = AutoTokenizer.from_pretrained("../../Meta-Llama-3-8B-I
 # add blueprint from routes/conversation  and routes/auth_bp
 app.register_blueprint(conversation)
 app.register_blueprint(auth_bp)
+app.register_blueprint(upload)
 
 CERT_FILE = "./ssl_context/cert.pem"
 KEY_FILE = "./ssl_context/key.pem"

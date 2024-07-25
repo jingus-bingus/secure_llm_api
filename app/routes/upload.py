@@ -5,14 +5,14 @@ from database import Database_Manager
 import json
 import os
 
-upload = Blueprint('conversation', __name__)
+upload = Blueprint('upload', __name__)
 
     
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']
     
-@upload.routes('/upload', methods=['GET', 'POST'])
+@upload.route('/upload', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
         # check if the post request has the file part
@@ -28,9 +28,12 @@ def upload_file():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-            return redirect(url_for('uploaded_file',
-                                    filename=filename))
-        return '''
+            return '''
+                <!doctype html>
+                <title>Upload new File</title>
+                <h1>File Successfully uploaded: ''' + file.filename + '''</h1>
+            '''
+    return '''
         <!doctype html>
         <title>Upload new File</title>
         <h1>Upload new File</h1>
@@ -38,5 +41,5 @@ def upload_file():
         <input type=file name=file>
         <input type=submit value=Upload>
         </form>
-        '''
+    '''
     
