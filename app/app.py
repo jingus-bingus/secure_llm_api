@@ -1,9 +1,10 @@
-from flask import Flask, session
+from flask import Flask, flash, request, redirect, url_for
+from werkzeug.utils import secure_filename
 from transformers import LlamaForCausalLM, AutoTokenizer, BitsAndBytesConfig
 import torch
 from flask_cors import CORS
 import os
-from routes import conversation
+from routes import conversation, upload
 from routes.authentication import auth_bp
 from config import Config
 
@@ -13,6 +14,9 @@ app.secret_key = Config.SECRET_KEY
 
 # create config for oauth
 app.config.from_object(Config)
+
+app.config['UPLOAD_FOLDER'] = './files'
+app.config['ALLOWED_EXTENSIONS'] = {'pdf',}
 
 # creates config for quanitization
 bits_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.bfloat16)
@@ -24,6 +28,7 @@ app.config['TOKENIZER'] = AutoTokenizer.from_pretrained("../../Meta-Llama-3-8B-I
 # add blueprint from routes/conversation  and routes/auth_bp
 app.register_blueprint(conversation)
 app.register_blueprint(auth_bp)
+app.register_blueprint(upload)
 
 CERT_FILE = "./ssl_context/cert.pem"
 KEY_FILE = "./ssl_context/key.pem"

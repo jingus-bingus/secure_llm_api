@@ -35,7 +35,7 @@ class RAG_manager:
         vectorstore.add_documents(texts)
 
         # performs a similarity search on the question to pick relative context
-        retriever = vectorstore.as_retriever(k=7)
+        retriever = vectorstore.as_retriever(k=3)
         self.docs = retriever.invoke(question)
         content = "\n\n".join([d.page_content for d in self.docs])
 
@@ -50,6 +50,6 @@ class RAG_manager:
         
         self.content = self.remove_chars_at_indices(content, indeces)
 
-        print(self.content)
+        # print(self.content)
 
         return self.content

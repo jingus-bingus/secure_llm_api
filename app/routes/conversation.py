@@ -2,6 +2,8 @@ from flask import Blueprint, request, current_app, session, jsonify
 from llm_manager import LLM_Manager
 from database import Database_Manager
 import json
+from langchain_community.document_loaders import PyPDFLoader
+import os
 
 conversation = Blueprint('conversation', __name__)
 
@@ -31,8 +33,17 @@ def manage_conversation():
                 context=context
                 )
             
+            loader = None
+            if 'file' in input:
+                file_path = "./files/" + input['file']
+                print(file_path)
+                if os.path.isfile(file_path):
+                    loader = PyPDFLoader(file_path)
+                else:
+                    return jsonify({"error": {"status": 400, "message": "File does not exist"}}), 400
+            
             response = {}
-            response['output'] = chat.generate_response(input['prompt'])
+            response['output'] = chat.generate_response(user_prompt=input['prompt'], loader=loader)
             # session['messages'] = chat.messages
             db = Database_Manager(user_id = input['user_id'])
             conversation_id = db.insert_conversation(messages = chat.messages, key=current_app.config['KEY'])
@@ -52,8 +63,17 @@ def manage_conversation():
                 messages = messages
                 )
             
+            loader = None
+            if 'file' in input:
+                file_path = "./files/" + input['file']
+                print(file_path)
+                if os.path.isfile(file_path):
+                    loader = PyPDFLoader(file_path)
+                else:
+                    return jsonify({"error": {"status": 400, "message": "File does not exist"}}), 400
+            
             response = {}
-            response['output'] = chat.generate_response(input['prompt'])
+            response['output'] = chat.generate_response(user_prompt=input['prompt'], loader=loader)
             db.update_conversation(messages = chat.messages, conversation_id = input['conversation_id'], key=current_app.config['KEY'])
 
             return json.dumps(response), 201

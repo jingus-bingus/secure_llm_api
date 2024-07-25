@@ -20,12 +20,12 @@ import requests
 url = "https://127.0.0.1:5000/conversation"
 
 session = requests.Session()
-data = {'prompt': 'Why is the sky blue?', 'user_id' : 3}
+data = {'prompt': 'Give a summary of the patient\'s information.', 'user_id' : 3, 'file': 'sample_filled_in_MR.pdf'}
 response = session.post(url, json=data, verify=False).json()
 print(response)
 
-data = {'prompt': 'Who discovered this?', 'user_id': 3, 'conversation_id' : response['conversation_id']}
-response = session.put(url, json=data, verify=False).json()
-print(response['output'])
+# data = {'prompt': 'Who discovered this?', 'user_id': 3, 'conversation_id' : response['conversation_id']}
+# response = session.put(url, json=data, verify=False).json()
+# print(response['output'])
 
-print(response)
+# print(response)
