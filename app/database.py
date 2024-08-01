@@ -1,7 +1,6 @@
 import os
 import json
 import psycopg2
-from psycopg2 import sql
 
 class Database_Manager:
     def __init__(self, user_id = None):
@@ -33,8 +32,6 @@ class Database_Manager:
         if connection is None:
             print("Failed to connect to the database.")
             return
-
-        
 
         try:
             cursor = connection.cursor()

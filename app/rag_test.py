@@ -12,5 +12,5 @@ model = LlamaForCausalLM.from_pretrained("../../Meta-Llama-3-8B-Instruct", quant
 tokenizer = AutoTokenizer.from_pretrained("../../Meta-Llama-3-8B-Instruct")
 chat = LLM_Manager(model=model, tokenizer=tokenizer, system_prompt=system_prompt)
 
-question = "According to the document, can the patient communicate his or her decision relating to his or her property and affairs? Use the checked boxes in the context to answer this question."
+question = "According to the document, can the patient communicate his or her decision relating to his or her property and affairs?"
 print(chat.generate_response(user_prompt=question, loader=loader))

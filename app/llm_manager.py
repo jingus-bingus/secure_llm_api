@@ -1,8 +1,5 @@
 from transformers import pipeline, LlamaForCausalLM, AutoTokenizer
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings.sentence_transformer import SentenceTransformerEmbeddings
-from langchain_community.vectorstores import Chroma
 import torch
 import time
 from rag_manager import RAG_manager
@@ -101,5 +98,3 @@ class LLM_Manager:
         # update message list with new response and returns
         self.add_message_llm(outputs[0]["generated_text"][len(prompt):])
         return outputs[0]["generated_text"][len(prompt):]
-
-    
