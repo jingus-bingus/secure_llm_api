@@ -3,6 +3,7 @@ from llm_manager import LLM_Manager
 from database import Database_Manager
 import json
 from langchain_community.document_loaders import PyPDFLoader
+from cryptography.fernet import Fernet
 import os
 
 conversation = Blueprint('conversation', __name__)
@@ -14,7 +15,11 @@ def manage_conversation():
         #returns conversation history
         if request.method == 'GET':
             input = request.get_json()
-            db = Database_Manager(user_id = input['user_id'])
+            db = Database_Manager(user_id = session['user_id'])
+            log_string = b"User: " + str(session['user_id'])
+            fernet = Fernet(key=current_app.config['KEY'])
+            log_encrypted = fernet.encrypt(log_string)
+            current_app.logger.info(log_encrypted)
 
             return db.retrieve_conversations(key=current_app.config['KEY']), 200
         
@@ -24,6 +29,9 @@ def manage_conversation():
             context = None
             if 'context' in input:
                 context = input['context']
+            if 'user_id' not in session:
+                return jsonify({"error": {"status": 400, "message": "Please log in"}}), 400
+            user_id = session['user_id']
             system_prompt = "You are a helpful assistant. Answer the questions succinctly."
 
             chat = LLM_Manager(
@@ -45,8 +53,12 @@ def manage_conversation():
             response = {}
             response['output'] = chat.generate_response(user_prompt=input['prompt'], loader=loader)
             # session['messages'] = chat.messages
-            db = Database_Manager(user_id = input['user_id'])
+            db = Database_Manager(user_id = user_id)
             conversation_id = db.insert_conversation(messages = chat.messages, key=current_app.config['KEY'])
+            log_string = 'User ' + str(user_id) + ' created new conversation ' + str(conversation_id)
+            fernet = Fernet(key=current_app.config['KEY'])
+            log_encrypted = fernet.encrypt(log_string.encode())
+            current_app.logger.info(log_encrypted)
             
             response['conversation_id'] = conversation_id
             return json.dumps(response), 201
@@ -54,7 +66,10 @@ def manage_conversation():
         #continues conversation
         if request.method == 'PUT':
             input = request.get_json()
-            db = Database_Manager(user_id = input['user_id'])
+            if 'user_id' not in session:
+                return jsonify({"error": {"status": 400, "message": "Please log in"}}), 400
+            user_id = session['user_id']
+            db = Database_Manager(user_id = user_id)
             messages = db.retrieve_messages(conversation_id = input['conversation_id'], key=current_app.config['KEY'])
 
             chat = LLM_Manager(
@@ -75,6 +90,10 @@ def manage_conversation():
             response = {}
             response['output'] = chat.generate_response(user_prompt=input['prompt'], loader=loader)
             db.update_conversation(messages = chat.messages, conversation_id = input['conversation_id'], key=current_app.config['KEY'])
+            log_string = 'User ' + str(user_id) + ' updated conversation ' + str(input['conversation_id'])
+            fernet = Fernet(key=current_app.config['KEY'])
+            log_encrypted = fernet.encrypt(log_string.encode())
+            current_app.logger.info(log_encrypted)
 
             return json.dumps(response), 201
     

@@ -1,12 +1,14 @@
-from flask import Flask, flash, request, redirect, url_for
-from werkzeug.utils import secure_filename
+from flask import Flask
 from transformers import LlamaForCausalLM, AutoTokenizer, BitsAndBytesConfig
 import torch
 from flask_cors import CORS
-import os
 from routes import conversation, upload
 from routes.authentication import auth_bp
 from config import Config
+
+import logging
+logging.basicConfig(filename='record.log', level=logging.DEBUG, 
+                    format= '%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s')
 
 app = Flask(__name__)
 CORS(app)
