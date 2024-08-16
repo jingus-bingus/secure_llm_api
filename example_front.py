@@ -26,7 +26,7 @@ def signup():
             # Open the QR code URL in the web browser
             qr_code_url = f"https://127.0.0.1:5000/qrcode/{user_id}/{totp_secret}"
             webbrowser.open(qr_code_url)
-            return user_id
+            return session
         else:
             print("Error with request:", response.text)
             return None
@@ -61,7 +61,7 @@ def login():
             verify_response = session.post(verify_url, json=verify_data, timeout=30, verify=cert_path)
             if verify_response.status_code == 200 and verify_response.json()['verified']:
                 print("Login successful!")
-                return user_id
+                return session
             else:
                 print("Invalid token.")
                 return None
@@ -78,13 +78,12 @@ def login():
 def main():
     choice = input("Do you want to [login] or [signup]? ")
     user_id = None
-
     if choice.lower() == 'signup':
-        user_id = signup()
+        session = signup()
     elif choice.lower() == 'login':
-        user_id = login()
+        session = login()
     
-    if user_id is None:
+    if session is None:
         print("Exiting program...")
         return
     
@@ -105,11 +104,10 @@ def main():
     message = input("USER: ")
     print("------------------------------------")
     if file_choice:
-        data = {"prompt": message, "user_id": user_id, "file": file_choice}
+        data = {"prompt": message, "file": file_choice}
     else:
-        data = {"prompt": message, "user_id": user_id}
+        data = {"prompt": message}
 
-    session = requests.Session()
     url = "https://127.0.0.1:5000/conversation"
     response = session.post(url, json=data, timeout=30, verify=cert_path).json()
     conversation_id = response["conversation_id"]
@@ -123,9 +121,9 @@ def main():
             break
         
         if file_choice:
-            data = {"prompt": message, "conversation_id": conversation_id, "user_id": user_id, "file": file_choice}
+            data = {"prompt": message, "conversation_id": conversation_id, "file": file_choice}
         else:
-            data = {"prompt": message, "conversation_id": conversation_id, "user_id": user_id}
+            data = {"prompt": message, "conversation_id": conversation_id}
 
         response = session.put(url, json=data, verify=cert_path).json()
 

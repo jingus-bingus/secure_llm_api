@@ -56,7 +56,7 @@ def signup():
 
         # Insert user with TOTP secret
         user_id = db_manager.insert_user(user_name, hashed_password, totp_secret)
-        
+        session['user_id'] = user_id
         return jsonify({"message": "User created successfully!", "user_id": user_id, "totp_secret": totp_secret}), 201
     except Exception as e:
         print("Failed to insert user:", e)
@@ -101,7 +101,6 @@ def login():
     try:
         user = db_manager.get_user_by_username(user_name)
         if user and bcrypt.checkpw(password.encode('utf-8'), user['password'].encode('utf-8')):
-            session['user_id'] = user['user_id']
             return jsonify({"message": "Password verified, please provide the TOTP token", 'user_id': user['user_id']}), 200
         else:
             return jsonify({"error": "Invalid username or password"}), 401
@@ -121,6 +120,7 @@ def verify_token():
         if totp_secret:
             totp = pyotp.TOTP(totp_secret)
             if totp.verify(token):
+                session['user_id'] = user_id
                 return jsonify({"verified": True}), 200
             else:
                 return jsonify({"verified": False}), 401

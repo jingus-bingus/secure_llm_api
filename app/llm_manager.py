@@ -69,32 +69,36 @@ class LLM_Manager:
     
     #generates a new assistant message based on the messages list
     def generate_response(self, user_prompt: str, loader: PyPDFLoader = None):
-        self.add_message_user(user_prompt, loader)
+        try:
+            self.add_message_user(user_prompt, loader)
 
-        # tokenizes messages list as prompt
-        prompt = self.pipeline.tokenizer.apply_chat_template(
-            self.messages, 
-            tokenize=False, 
-            add_generation_prompt=True
-        )
-        terminators = [
-            self.pipeline.tokenizer.eos_token_id,
-            self.pipeline.tokenizer.convert_tokens_to_ids("<|eot_id|>")
-        ]
+            # tokenizes messages list as prompt
+            prompt = self.pipeline.tokenizer.apply_chat_template(
+                self.messages, 
+                tokenize=False, 
+                add_generation_prompt=True
+            )
+            terminators = [
+                self.pipeline.tokenizer.eos_token_id,
+                self.pipeline.tokenizer.convert_tokens_to_ids("<|eot_id|>")
+            ]
 
-        start = time.time()
-        # generates a new message from the tokenized prompt
-        outputs = self.pipeline(
-            prompt,
-            max_new_tokens=512,
-            eos_token_id=terminators,
-            do_sample=True,
-            temperature=0.6,
-            top_p=0.9,
-        )
-        end = time.time()
-        self.time_generation = (end - start) * 10**3
+            start = time.time()
+            # generates a new message from the tokenized prompt
+            outputs = self.pipeline(
+                prompt,
+                max_new_tokens=512,
+                eos_token_id=terminators,
+                do_sample=True,
+                temperature=0.6,
+                top_p=0.9,
+            )
+            end = time.time()
+            self.time_generation = (end - start) * 10**3
 
-        # update message list with new response and returns
-        self.add_message_llm(outputs[0]["generated_text"][len(prompt):])
-        return outputs[0]["generated_text"][len(prompt):]
+            # update message list with new response and returns
+            self.add_message_llm(outputs[0]["generated_text"][len(prompt):])
+            return outputs[0]["generated_text"][len(prompt):]
+        except Exception as e: 
+            print(str(e))
+            return "Error: " + str(e)
