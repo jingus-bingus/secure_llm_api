@@ -35,7 +35,8 @@ app.register_blueprint(upload)
 CERT_FILE = "./ssl_context/cert.pem"
 KEY_FILE = "./ssl_context/key.pem"
 
-app.config['KEY'] = 'dummy_key'
+# dummy key for development
+app.config['KEY'] = 'CvrjvqJVYHKbhA3rO7JoJoDJoJxiv1ssSxsVlx-DRfE='
 
 def start_server():
     context = ("./ssl_context/cert.pem", "./ssl_context/key.pem")
