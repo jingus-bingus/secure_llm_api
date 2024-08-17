@@ -44,3 +44,23 @@ def start_server():
 
 if __name__ == '__main__':
     start_server()
+
+
+# Unseal Key 1: da2hPvFkZmzEavbX6W+/sYdYVqtxRtuBu01McJPAchNx
+# Unseal Key 2: hpbew43L9FQoNRMyWqfZOIKPndhxxKynnk6ZEA/00noq
+# Unseal Key 3: DTcOCY7StKFAAE53zdDNOmTgB3PUKZdlb8HuhJgvEikL
+# Unseal Key 4: nCCwn3fEbcCEHCrsJ/+uL98iput0SxxP9ECcEbKUcZ6E
+# Unseal Key 5: /Iw3DuVD2sSiB57zgS4JxLNx07ebQQW1Qlq3G2DGi0BR
+
+# Initial Root Token: hvs.Qx0jI7p96jjCVW9LS9TkTdSw
+
+# Key                  Value
+# ---                  -----
+# token                hvs.Qx0jI7p96jjCVW9LS9TkTdSw
+# token_accessor       n4kXO1JPtba8W6UipDbsRB88
+# token_duration       ∞
+# token_renewable      false
+# token_policies       ["root"]
+# identity_policies    []
+# policies             ["root"]
+

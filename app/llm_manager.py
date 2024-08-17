@@ -68,9 +68,10 @@ class LLM_Manager:
                               "content": message_llm})
     
     #generates a new assistant message based on the messages list
-    def generate_response(self, user_prompt: str, loader: PyPDFLoader = None):
+    def generate_response(self, user_prompt: str = None, loader: PyPDFLoader = None):
         try:
-            self.add_message_user(user_prompt, loader)
+            if user_prompt:
+                self.add_message_user(user_prompt, loader)
 
             # tokenizes messages list as prompt
             prompt = self.pipeline.tokenizer.apply_chat_template(
